@@ -3,6 +3,7 @@ import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/placeholder.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:hihiienngok/services/utils.dart';
+import 'package:hihiienngok/widgets/back_widget.dart';
 import 'package:hihiienngok/widgets/on_sale_widget.dart';
 import 'package:hihiienngok/widgets/text_widget.dart';
 
@@ -20,16 +21,7 @@ class OnSaleScreen extends StatelessWidget {
 
     return Scaffold(
         appBar: AppBar(
-          leading: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () {
-              Navigator.pop(context);
-            },
-            child: Icon(
-              IconlyLight.arrowLeft2,
-              color: color,
-            ),
-          ),
+          leading: const BackWidget(),
           elevation: 0,
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           title: TextWidget(

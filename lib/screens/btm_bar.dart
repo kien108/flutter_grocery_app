@@ -8,6 +8,9 @@ import 'package:hihiienngok/screens/categories.dart';
 import 'package:hihiienngok/screens/home_screen.dart';
 import 'package:hihiienngok/screens/user.dart';
 import 'package:provider/provider.dart';
+import 'package:badges/badges.dart' as badge;
+
+import '../widgets/text_widget.dart';
 
 class BottomBarScreen extends StatefulWidget {
   const BottomBarScreen({super.key});
@@ -17,7 +20,7 @@ class BottomBarScreen extends StatefulWidget {
 }
 
 class _BottomBarScreenState extends State<BottomBarScreen> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 3;
 
   final List<Map<String, dynamic>> _pages = [
     {
@@ -72,8 +75,22 @@ class _BottomBarScreenState extends State<BottomBarScreen> {
                     : IconlyLight.category),
                 label: 'Categories'),
             BottomNavigationBarItem(
-                icon: Icon(
-                    _selectedIndex == 2 ? IconlyBold.buy : IconlyLight.buy),
+                icon: badge.Badge(
+                    badgeAnimation: const badge.BadgeAnimation.slide(),
+                    badgeStyle: badge.BadgeStyle(
+                      shape: badge.BadgeShape.circle,
+                      badgeColor: Colors.blue,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    position: badge.BadgePosition.topEnd(top: -7, end: -7),
+                    badgeContent: FittedBox(
+                        child: TextWidget(
+                            text: '3',
+                            color: Colors.white,
+                            fontSize: 15)),
+                    child: Icon(
+                        _selectedIndex == 2 ? IconlyBold.buy : IconlyLight.buy),
+                  ),
                 label: 'Buy'),
             BottomNavigationBarItem(
                 icon: Icon(

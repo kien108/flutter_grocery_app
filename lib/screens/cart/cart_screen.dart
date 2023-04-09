@@ -6,6 +6,8 @@ import 'package:hihiienngok/screens/cart/cart_widget.dart';
 import 'package:hihiienngok/services/utils.dart';
 import 'package:hihiienngok/widgets/text_widget.dart';
 
+import '../../services/global_methods.dart';
+
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
@@ -20,7 +22,13 @@ class CartScreen extends StatelessWidget {
         appBar: AppBar(
           actions: [
             IconButton(
-              onPressed: () {},
+              onPressed: () async {
+                await GlobalMethods.warningDialog(
+                    title: "Delete", 
+                    subtitle: "Are you sure to delete?", 
+                    fct: (){}, 
+                    context: context);
+              },
               icon: const Icon(IconlyBroken.delete),
               color: color,
             )
