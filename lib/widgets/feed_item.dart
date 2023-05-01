@@ -1,17 +1,24 @@
 import 'package:fancy_shimmer_image/fancy_shimmer_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/placeholder.dart';
+import 'package:hihiienngok/consts/firebase_const.dart';
 import 'package:hihiienngok/inner_screens/product_details_screen.dart';
+import 'package:hihiienngok/models/product_model.dart';
+import 'package:hihiienngok/provider/cart_provider.dart';
+import 'package:hihiienngok/provider/viewed_provider.dart';
+import 'package:hihiienngok/provider/wishlist_provider.dart';
 import 'package:hihiienngok/services/global_methods.dart';
 import 'package:hihiienngok/services/utils.dart';
 import 'package:hihiienngok/widgets/heart_btn.dart';
 import 'package:hihiienngok/widgets/price_widget.dart';
 import 'package:hihiienngok/widgets/text_widget.dart';
+import 'package:provider/provider.dart';
 
 class FeedsWidget extends StatefulWidget {
-  const FeedsWidget({super.key});
+  const FeedsWidget({Key? key}) : super(key: key);
 
   @override
   State<FeedsWidget> createState() => _FeedsWidgetState();
@@ -37,6 +44,14 @@ class _FeedsWidgetState extends State<FeedsWidget> {
     final Utils utils = Utils(context);
     Size size = utils.screenSize;
     Color color = utils.color;
+    final productModel = Provider.of<ProductModel>(context);
+    final cartProvider = Provider.of<CartProvider>(context);
+    final wishListProvider = Provider.of<WishListProvider>(context);
+
+    bool? _isInCart = cartProvider.getCartItems.containsKey(productModel.id);
+    bool? _isWishList =
+        wishListProvider.getWishListItems.containsKey(productModel.id);
+    final viewedProvider = Provider.of<ViewedProvider>(context);
 
     return Padding(
         padding: EdgeInsets.all(8),
@@ -45,14 +60,18 @@ class _FeedsWidgetState extends State<FeedsWidget> {
           borderRadius: BorderRadius.circular(12),
           child: InkWell(
             onTap: () {
-              GlobalMethods.navigateTo(
-                  ctx: context, routeName: ProductDetailsScreen.routeName);
+              viewedProvider.addToViewed(productId: productModel.id);
+
+              Navigator.pushNamed(context, ProductDetailsScreen.routeName,
+                  arguments: productModel.id);
+              // GlobalMethods.navigateTo(
+              //     ctx: context, routeName: ProductDetailsScreen.routeName);
             },
             borderRadius: BorderRadius.circular(12),
             child: Column(
               children: [
                 FancyShimmerImage(
-                  imageUrl: 'https://i.ibb.co/F0s3FHQ/Apricots.png',
+                  imageUrl: productModel.imageUrl,
                   height: size.width * 0.21,
                   width: size.width * 0.2,
                   boxFit: BoxFit.fill,
@@ -62,13 +81,21 @@ class _FeedsWidgetState extends State<FeedsWidget> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      TextWidget(
-                        text: 'Title',
-                        color: color,
-                        fontSize: 20,
-                        isTitle: true,
-                      ),
-                      HeartBtn()
+                      Flexible(
+                          flex: 3,
+                          child: TextWidget(
+                            text: productModel.title,
+                            color: color,
+                            fontSize: 18,
+                            maxLines: 1,
+                            isTitle: true,
+                          )),
+                      Flexible(
+                          flex: 1,
+                          child: HeartBtn(
+                            productId: productModel.id,
+                            isInWishlist: _isWishList,
+                          ))
                     ],
                   ),
                 ),
@@ -80,13 +107,13 @@ class _FeedsWidgetState extends State<FeedsWidget> {
                       Flexible(
                           flex: 4,
                           child: PriceWidget(
-                            isOnSale: true,
-                            price: 5.9,
-                            salePrice: 2.99,
+                            isOnSale: productModel.isOnSale,
+                            price: productModel.price,
+                            salePrice: productModel.salePrice,
                             textPrice: _quantityTextController.text,
                           )),
                       const SizedBox(
-                        width: 8,
+                        width: 6,
                       ),
                       Flexible(
                           flex: 2,
@@ -94,9 +121,9 @@ class _FeedsWidgetState extends State<FeedsWidget> {
                             children: [
                               FittedBox(
                                   child: TextWidget(
-                                text: 'KG',
+                                text: productModel.isPiece ? 'Piece' : 'kg',
                                 color: color,
-                                fontSize: 18,
+                                fontSize: 16,
                                 isTitle: true,
                               )),
                               const SizedBox(
@@ -131,7 +158,25 @@ class _FeedsWidgetState extends State<FeedsWidget> {
                 SizedBox(
                   width: double.infinity,
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () async {
+                      final User? user = authInstance.currentUser;
+
+                      if (user == null) {
+                        GlobalMethods.errorDialog(
+                            subtitle: 'No user found, Please login first',
+                            context: context);
+                        return;
+                      }
+
+                      if (_isInCart) {
+                        return;
+                      }
+                      await GlobalMethods.addToCart(
+                          productId: productModel.id,
+                          quantity: int.parse(_quantityTextController.text),
+                          context: context);
+                      await cartProvider.fetchCart();
+                    },
                     style: ButtonStyle(
                         backgroundColor: MaterialStateProperty.all(
                             Theme.of(context).cardColor),
@@ -144,7 +189,7 @@ class _FeedsWidgetState extends State<FeedsWidget> {
                           bottomRight: Radius.circular(12),
                         )))),
                     child: TextWidget(
-                      text: 'Add to cart',
+                      text: _isInCart ? 'In cart' : 'Add to cart',
                       color: color,
                       fontSize: 20,
                       maxLines: 1,

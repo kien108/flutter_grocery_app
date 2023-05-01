@@ -1,9 +1,16 @@
 import 'package:card_swiper/card_swiper.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
+import 'package:hihiienngok/consts/firebase_const.dart';
 import 'package:hihiienngok/screens/auth/login.dart';
+import 'package:hihiienngok/screens/btm_bar.dart';
+import 'package:hihiienngok/screens/loading_manager.dart';
+import 'package:hihiienngok/services/global_methods.dart';
+import 'package:hihiienngok/widgets/fetch_screen.dart';
 
 import '../../consts/contss.dart';
 import '../../services/utils.dart';
@@ -41,11 +48,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  bool _isLoading = false;
   void _submitFormOnRegister() async {
     final isValid = _formKey.currentState!.validate();
     FocusScope.of(context).unfocus();
+    setState(() {
+      _isLoading = true;
+    });
     if (isValid) {
       _formKey.currentState!.save();
+
+      try {
+        await authInstance.createUserWithEmailAndPassword(
+            email: _emailTextController.text.toLowerCase().trim(),
+            password: _passTextController.text.trim());
+        final User? user = authInstance.currentUser;
+        final _uid = user!.uid;
+        user.updateDisplayName(_fullNameController.text);
+        user.reload();
+
+        await FirebaseFirestore.instance.collection('users').doc(_uid).set({
+          'id': _uid,
+          'name': _fullNameController.text.trim(),
+          'email': _emailTextController.text.toLowerCase().trim(),
+          'shipping-address': _addressTextController.text.trim(),
+          'userWish': [],
+          'userCart': [],
+          'createAt': Timestamp.now(),
+        });
+
+        Navigator.of(context).pushReplacement(MaterialPageRoute(
+          builder: (context) => FetchScreen(),
+        ));
+
+        print('Successfully registered');
+      } on FirebaseException catch (error) {
+        GlobalMethods.errorDialog(
+            subtitle: '${error.message}', context: context);
+      } catch (error) {
+        GlobalMethods.errorDialog(subtitle: '${error}', context: context);
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -54,264 +104,269 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final theme = Utils(context).getTheme;
     Color color = Utils(context).color;
 
-    return Scaffold(
-      body: Stack(
-        children: <Widget>[
-          Swiper(
-            duration: 800,
-            autoplayDelay: 6000,
+    return LoadingManager(
+        isLoading: _isLoading,
+        child: Scaffold(
+          body: Stack(
+            children: <Widget>[
+              Swiper(
+                duration: 800,
+                autoplayDelay: 6000,
 
-            itemBuilder: (BuildContext context, int index) {
-              return Image.asset(
-                Constss.authImagesPaths[index],
-                fit: BoxFit.cover,
-              );
-            },
-            autoplay: true,
-            itemCount: Constss.authImagesPaths.length,
+                itemBuilder: (BuildContext context, int index) {
+                  return Image.asset(
+                    Constss.authImagesPaths[index],
+                    fit: BoxFit.cover,
+                  );
+                },
+                autoplay: true,
+                itemCount: Constss.authImagesPaths.length,
 
-            // control: const SwiperControl(),
-          ),
-          Container(
-            color: Colors.black.withOpacity(0.7),
-          ),
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.max,
-              children: <Widget>[
-                const SizedBox(
-                  height: 60.0,
-                ),
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () =>
-                      Navigator.canPop(context) ? Navigator.pop(context) : null,
-                  child: Icon(
-                    IconlyLight.arrowLeft2,
-                    color: theme == true ? Colors.white : Colors.black,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(
-                  height: 40.0,
-                ),
-                TextWidget(
-                  text: 'Welcome',
-                  color: Colors.white,
-                  fontSize: 30,
-                  isTitle: true,
-                ),
-                const SizedBox(
-                  height: 8,
-                ),
-                TextWidget(
-                  text: "Sign up to continue",
-                  color: Colors.white,
-                  fontSize: 18,
-                  isTitle: false,
-                ),
-                const SizedBox(
-                  height: 30.0,
-                ),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        textInputAction: TextInputAction.next,
-                        onEditingComplete: () => FocusScope.of(context)
-                            .requestFocus(_emailFocusNode),
-                        keyboardType: TextInputType.name,
-                        controller: _fullNameController,
-                        validator: (value) {
-                          if (value!.isEmpty) {
-                            return "This Field is missing";
-                          } else {
-                            return null;
-                          }
-                        },
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          hintText: 'Full name',
-                          hintStyle: TextStyle(color: Colors.white),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white),
-                          ),
-                          errorBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.red),
-                          ),
-                        ),
+                // control: const SwiperControl(),
+              ),
+              Container(
+                color: Colors.black.withOpacity(0.7),
+              ),
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.max,
+                  children: <Widget>[
+                    const SizedBox(
+                      height: 60.0,
+                    ),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => Navigator.canPop(context)
+                          ? Navigator.pop(context)
+                          : null,
+                      child: Icon(
+                        IconlyLight.arrowLeft2,
+                        color: theme == true ? Colors.white : Colors.black,
+                        size: 24,
                       ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                      TextFormField(
-                        focusNode: _emailFocusNode,
-                        textInputAction: TextInputAction.next,
-                        onEditingComplete: () =>
-                            FocusScope.of(context).requestFocus(_passFocusNode),
-                        keyboardType: TextInputType.emailAddress,
-                        controller: _emailTextController,
-                        validator: (value) {
-                          if (value!.isEmpty || !value.contains("@")) {
-                            return "Please enter a valid Email adress";
-                          } else {
-                            return null;
-                          }
-                        },
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          hintText: 'Email',
-                          hintStyle: TextStyle(color: Colors.white),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white),
-                          ),
-                          errorBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.red),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                      //Password
-                      TextFormField(
-                        focusNode: _passFocusNode,
-                        obscureText: _obscureText,
-                        keyboardType: TextInputType.visiblePassword,
-                        controller: _passTextController,
-                        validator: (value) {
-                          if (value!.isEmpty || value.length < 7) {
-                            return "Please enter a valid password";
-                          } else {
-                            return null;
-                          }
-                        },
-                        style: const TextStyle(color: Colors.white),
-                        onEditingComplete: () => FocusScope.of(context)
-                            .requestFocus(_addressFocusNode),
-                        decoration: InputDecoration(
-                          suffixIcon: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _obscureText = !_obscureText;
-                              });
+                    ),
+                    const SizedBox(
+                      height: 40.0,
+                    ),
+                    TextWidget(
+                      text: 'Welcome',
+                      color: Colors.white,
+                      fontSize: 30,
+                      isTitle: true,
+                    ),
+                    const SizedBox(
+                      height: 8,
+                    ),
+                    TextWidget(
+                      text: "Sign up to continue",
+                      color: Colors.white,
+                      fontSize: 18,
+                      isTitle: false,
+                    ),
+                    const SizedBox(
+                      height: 30.0,
+                    ),
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            textInputAction: TextInputAction.next,
+                            onEditingComplete: () => FocusScope.of(context)
+                                .requestFocus(_emailFocusNode),
+                            keyboardType: TextInputType.name,
+                            controller: _fullNameController,
+                            validator: (value) {
+                              if (value!.isEmpty) {
+                                return "This Field is missing";
+                              } else {
+                                return null;
+                              }
                             },
-                            child: Icon(
-                              _obscureText
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              color: Colors.white,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(
+                              hintText: 'Full name',
+                              hintStyle: TextStyle(color: Colors.white),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white),
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white),
+                              ),
+                              errorBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
                             ),
                           ),
-                          hintText: 'Password',
-                          hintStyle: const TextStyle(color: Colors.white),
-                          enabledBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white),
+                          const SizedBox(
+                            height: 20,
                           ),
-                          focusedBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white),
+                          TextFormField(
+                            focusNode: _emailFocusNode,
+                            textInputAction: TextInputAction.next,
+                            onEditingComplete: () => FocusScope.of(context)
+                                .requestFocus(_passFocusNode),
+                            keyboardType: TextInputType.emailAddress,
+                            controller: _emailTextController,
+                            validator: (value) {
+                              if (value!.isEmpty || !value.contains("@")) {
+                                return "Please enter a valid Email adress";
+                              } else {
+                                return null;
+                              }
+                            },
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(
+                              hintText: 'Email',
+                              hintStyle: TextStyle(color: Colors.white),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white),
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white),
+                              ),
+                              errorBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                            ),
                           ),
-                          errorBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.red),
+                          const SizedBox(
+                            height: 20,
                           ),
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
+                          //Password
+                          TextFormField(
+                            focusNode: _passFocusNode,
+                            obscureText: _obscureText,
+                            keyboardType: TextInputType.visiblePassword,
+                            controller: _passTextController,
+                            validator: (value) {
+                              if (value!.isEmpty || value.length < 7) {
+                                return "Please enter a valid password";
+                              } else {
+                                return null;
+                              }
+                            },
+                            style: const TextStyle(color: Colors.white),
+                            onEditingComplete: () => FocusScope.of(context)
+                                .requestFocus(_addressFocusNode),
+                            decoration: InputDecoration(
+                              suffixIcon: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _obscureText = !_obscureText;
+                                  });
+                                },
+                                child: Icon(
+                                  _obscureText
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              hintText: 'Password',
+                              hintStyle: const TextStyle(color: Colors.white),
+                              enabledBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white),
+                              ),
+                              focusedBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white),
+                              ),
+                              errorBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 20,
+                          ),
 
-                      TextFormField(
-                        focusNode: _addressFocusNode,
-                        textInputAction: TextInputAction.done,
-                        onEditingComplete: _submitFormOnRegister,
-                        controller: _addressTextController,
-                        validator: (value) {
-                          if (value!.isEmpty || value.length < 10) {
-                            return "Please enter a valid  address";
-                          } else {
-                            return null;
-                          }
+                          TextFormField(
+                            focusNode: _addressFocusNode,
+                            textInputAction: TextInputAction.done,
+                            // onEditingComplete: _submitFormOnRegister,
+                            controller: _addressTextController,
+                            validator: (value) {
+                              if (value!.isEmpty || value.length < 5) {
+                                return "Please enter a valid  address";
+                              } else {
+                                return null;
+                              }
+                            },
+                            style: const TextStyle(color: Colors.white),
+                            maxLines: 2,
+                            textAlign: TextAlign.start,
+                            decoration: const InputDecoration(
+                              hintText: 'Shipping address',
+                              hintStyle: TextStyle(color: Colors.white),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white),
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white),
+                              ),
+                              errorBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 5.0,
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          // GlobalMethods.navigateTo(
+                          //     ctx: context, routeName: FeedsScreen.routeName);
                         },
-                        style: const TextStyle(color: Colors.white),
-                        maxLines: 2,
-                        textAlign: TextAlign.start,
-                        decoration: const InputDecoration(
-                          hintText: 'Shipping address',
-                          hintStyle: TextStyle(color: Colors.white),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white),
-                          ),
-                          errorBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.red),
-                          ),
+                        child: const Text(
+                          'Forget password?',
+                          maxLines: 1,
+                          style: TextStyle(
+                              color: Colors.lightBlue,
+                              fontSize: 18,
+                              decoration: TextDecoration.underline,
+                              fontStyle: FontStyle.italic),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(
-                  height: 5.0,
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      // GlobalMethods.navigateTo(
-                      //     ctx: context, routeName: FeedsScreen.routeName);
-                    },
-                    child: const Text(
-                      'Forget password?',
-                      maxLines: 1,
-                      style: TextStyle(
-                          color: Colors.lightBlue,
-                          fontSize: 18,
-                          decoration: TextDecoration.underline,
-                          fontStyle: FontStyle.italic),
                     ),
-                  ),
+                    AuthButton(
+                      buttonText: 'Sign up',
+                      fct: () {
+                        _submitFormOnRegister();
+                      },
+                    ),
+                    const SizedBox(
+                      height: 10,
+                    ),
+                    RichText(
+                      text: TextSpan(
+                          text: 'Already a user?',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 18),
+                          children: <TextSpan>[
+                            TextSpan(
+                                text: ' Sign in',
+                                style: const TextStyle(
+                                    color: Colors.lightBlue, fontSize: 18),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    Navigator.pushReplacementNamed(
+                                        context, LoginScreen.routeName);
+                                  }),
+                          ]),
+                    ),
+                  ],
                 ),
-                AuthButton(
-                  buttonText: 'Sign up',
-                  fct: () {
-                    _submitFormOnRegister();
-                  },
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                RichText(
-                  text: TextSpan(
-                      text: 'Already a user?',
-                      style: const TextStyle(color: Colors.white, fontSize: 18),
-                      children: <TextSpan>[
-                        TextSpan(
-                            text: ' Sign in',
-                            style: const TextStyle(
-                                color: Colors.lightBlue, fontSize: 18),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                 Navigator.pushReplacementNamed(context, LoginScreen.routeName);
-                              }),
-                      ]),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        ));
   }
 }

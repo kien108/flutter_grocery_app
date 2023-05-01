@@ -1,3 +1,5 @@
+import 'package:hihiienngok/models/product_model.dart';
+
 class Constss {
   static final List<String> offerImages = [
     'assets/images/offres/Offer1.jpg',

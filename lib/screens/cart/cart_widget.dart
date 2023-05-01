@@ -5,13 +5,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/placeholder.dart';
 import 'package:hihiienngok/inner_screens/product_details_screen.dart';
+import 'package:hihiienngok/models/cart_modal.dart';
+import 'package:hihiienngok/models/product_model.dart';
+import 'package:hihiienngok/provider/cart_provider.dart';
+import 'package:hihiienngok/provider/product_provider.dart';
+import 'package:hihiienngok/provider/wishlist_provider.dart';
 import 'package:hihiienngok/services/global_methods.dart';
 import 'package:hihiienngok/services/utils.dart';
 import 'package:hihiienngok/widgets/heart_btn.dart';
 import 'package:hihiienngok/widgets/text_widget.dart';
+import 'package:provider/provider.dart';
 
 class CartWidget extends StatefulWidget {
-  const CartWidget({super.key});
+  const CartWidget({Key? key, required this.quantity}) : super(key: key);
+
+  final int quantity;
 
   @override
   State<CartWidget> createState() => _CartWidgetState();
@@ -22,7 +30,7 @@ class _CartWidgetState extends State<CartWidget> {
 
   @override
   void initState() {
-    _quantityTextController.text = '1';
+    _quantityTextController.text = widget.quantity.toString();
     super.initState();
   }
 
@@ -38,9 +46,23 @@ class _CartWidgetState extends State<CartWidget> {
 
     Size size = utils.screenSize;
     final Color color = utils.color;
+    final cartModel = Provider.of<CartModel>(context);
+    final productProviders = Provider.of<ProductProvider>(context);
+
+    final product = productProviders.findProductById(cartModel.productId);
+    double usedPrice = product.isOnSale ? product.salePrice : product.price;
+    double totalPrice = usedPrice * int.parse(_quantityTextController.text);
+
+    final cartProvider = Provider.of<CartProvider>(context);
+    final wishListProvider = Provider.of<WishListProvider>(context);
+    bool? _isInWishList =
+        wishListProvider.getWishListItems.containsKey(product.id);
 
     return GestureDetector(
-      onTap: () {},
+      onTap: () {
+        Navigator.pushNamed(context, ProductDetailsScreen.routeName,
+            arguments: cartModel.productId);
+      },
       child: Row(
         children: [
           Expanded(
@@ -59,12 +81,12 @@ class _CartWidgetState extends State<CartWidget> {
                               borderRadius: BorderRadius.circular(12)),
                           child: InkWell(
                             onTap: () {
-                              GlobalMethods.navigateTo(
-                                  ctx: context,
-                                  routeName: ProductDetailsScreen.routeName);
+                              Navigator.pushNamed(
+                                  context, ProductDetailsScreen.routeName,
+                                  arguments: cartModel.productId);
                             },
                             child: FancyShimmerImage(
-                              imageUrl: 'https://i.ibb.co/F0s3FHQ/Apricots.png',
+                              imageUrl: product.imageUrl,
                               boxFit: BoxFit.fill,
                             ),
                           )),
@@ -72,7 +94,7 @@ class _CartWidgetState extends State<CartWidget> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           TextWidget(
-                            text: 'Title',
+                            text: product.title,
                             color: color,
                             fontSize: 20,
                             isTitle: true,
@@ -86,16 +108,19 @@ class _CartWidgetState extends State<CartWidget> {
                               children: [
                                 _quantityController(
                                     callback: () {
-                                      if (_quantityTextController.text == '1')
+                                      if (_quantityTextController.text == '1') {
                                         return;
-
-                                      setState(() {
-                                        _quantityTextController.text =
-                                            (int.parse(_quantityTextController
-                                                        .text) -
-                                                    1)
-                                                .toString();
-                                      });
+                                      } else {
+                                        cartProvider
+                                            .reduceQuantityByOne(product.id);
+                                        setState(() {
+                                          _quantityTextController.text =
+                                              (int.parse(_quantityTextController
+                                                          .text) -
+                                                      1)
+                                                  .toString();
+                                        });
+                                      }
                                     },
                                     color: Colors.red,
                                     icon: CupertinoIcons.minus),
@@ -122,6 +147,8 @@ class _CartWidgetState extends State<CartWidget> {
                                 ),
                                 _quantityController(
                                     callback: () {
+                                      cartProvider
+                                          .increaseQuantityByOne(product.id);
                                       setState(() {
                                         _quantityTextController.text =
                                             (int.parse(_quantityTextController
@@ -142,16 +169,25 @@ class _CartWidgetState extends State<CartWidget> {
                         padding: const EdgeInsets.symmetric(horizontal: 5),
                         child: Column(children: [
                           InkWell(
-                            onTap: () {},
+                            onTap: () async {
+                              await cartProvider.removeOneItem(
+                                  cartId: cartModel.id,
+                                  productId: product.id,
+                                  quantity: cartModel.quantity);
+                            },
                             child: const Icon(CupertinoIcons.cart_badge_minus,
                                 color: Colors.red, size: 20),
                           ),
                           const SizedBox(
                             height: 5,
                           ),
-                          const HeartBtn(),
+                          HeartBtn(
+                            productId: product.id,
+                            isInWishlist: _isInWishList,
+                          ),
                           TextWidget(
-                            text: '\$0.29',
+                            text:
+                                '\$${(usedPrice * int.parse(_quantityTextController.text)).toStringAsFixed(2)}',
                             color: color,
                             fontSize: 18,
                             maxLines: 1,

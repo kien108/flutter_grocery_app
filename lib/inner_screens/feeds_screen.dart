@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/placeholder.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
+import 'package:hihiienngok/consts/contss.dart';
+import 'package:hihiienngok/models/product_model.dart';
+import 'package:hihiienngok/provider/product_provider.dart';
 import 'package:hihiienngok/services/utils.dart';
 import 'package:hihiienngok/widgets/back_widget.dart';
+import 'package:hihiienngok/widgets/empty_products_widget.dart';
 import 'package:hihiienngok/widgets/feed_item.dart';
 import 'package:hihiienngok/widgets/text_widget.dart';
+import 'package:provider/provider.dart';
 
 class FeedsScreen extends StatefulWidget {
   static const routeName = '/FeedsScreen';
@@ -19,6 +24,7 @@ class FeedsScreen extends StatefulWidget {
 class _FeedsScreenState extends State<FeedsScreen> {
   final TextEditingController? _searchTextController = TextEditingController();
   final FocusNode _searchTextFocusNode = FocusNode();
+  List<ProductModel> listProductSearch = [];
 
   @override
   void dispose() {
@@ -33,10 +39,12 @@ class _FeedsScreenState extends State<FeedsScreen> {
 
     Size size = utils.screenSize;
     final Color color = utils.color;
+    final productProviders = Provider.of<ProductProvider>(context);
+    List<ProductModel> allProducts = productProviders.getProducts;
 
     return Scaffold(
         appBar: AppBar(
-          leading: const BackWidget(),
+          leading: const BackWidget(isBackHome: true),
           elevation: 0,
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           centerTitle: true,
@@ -58,7 +66,9 @@ class _FeedsScreenState extends State<FeedsScreen> {
                     focusNode: _searchTextFocusNode,
                     controller: _searchTextController,
                     onChanged: (value) {
-                      setState(() {});
+                      setState(() {
+                        listProductSearch = productProviders.searchQuery(value);
+                      });
                     },
                     decoration: InputDecoration(
                         focusedBorder: OutlineInputBorder(
@@ -85,17 +95,29 @@ class _FeedsScreenState extends State<FeedsScreen> {
                   ),
                 ),
               ),
-              GridView.count(
-                physics: NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                crossAxisCount: 2,
-                padding: EdgeInsets.zero,
-                crossAxisSpacing: 10,
-                childAspectRatio: size.width / (size.height * 0.59),
-                children: List.generate(10, (index) {
-                  return FeedsWidget();
-                }),
-              )
+              _searchTextController!.text.isNotEmpty &&
+                      listProductSearch.isEmpty
+                  ? const EmptyProdWidget(
+                      text: 'No products found, please try another keyword')
+                  : GridView.count(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      crossAxisCount: 2,
+                      padding: EdgeInsets.zero,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: size.width / (size.height * 0.59),
+                      children: List.generate(
+                          _searchTextController!.text.isNotEmpty
+                              ? listProductSearch.length
+                              : allProducts.length, (index) {
+                        return ChangeNotifierProvider.value(
+                            value: _searchTextController!.text.isNotEmpty
+                                ? listProductSearch[index]
+                                : allProducts[index],
+                            child: FeedsWidget());
+                        ;
+                      }),
+                    )
             ],
           ),
         ));

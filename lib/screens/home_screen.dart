@@ -1,9 +1,12 @@
 import 'package:card_swiper/card_swiper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
+import 'package:hihiienngok/consts/contss.dart';
 import 'package:hihiienngok/inner_screens/feeds_screen.dart';
 import 'package:hihiienngok/inner_screens/on_sale_screen.dart';
+import 'package:hihiienngok/models/product_model.dart';
 import 'package:hihiienngok/provider/dark_theme_provider.dart';
+import 'package:hihiienngok/provider/product_provider.dart';
 import 'package:hihiienngok/services/global_methods.dart';
 import 'package:hihiienngok/services/utils.dart';
 import 'package:hihiienngok/widgets/feed_item.dart';
@@ -12,6 +15,7 @@ import 'package:hihiienngok/widgets/text_widget.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
+  static const routeName = "/Home";
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
@@ -33,7 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
     bool _isDark = utils.getTheme;
     Size size = utils.screenSize;
     final Color color = utils.color;
+    final productProviders = Provider.of<ProductProvider>(context);
 
+    List<ProductModel> allProducts = productProviders.getProducts;
+
+    List<ProductModel> productsOnSale = productProviders.getOnSaleProducts;
     return Scaffold(
         body: SingleChildScrollView(
       child: Column(
@@ -97,10 +105,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: SizedBox(
                 height: size.height * 0.24,
                 child: ListView.builder(
-                    itemCount: 10,
+                    itemCount:
+                        productsOnSale.length < 10 ? productsOnSale.length : 10,
                     scrollDirection: Axis.horizontal,
                     itemBuilder: (ctx, index) {
-                      return OnSaleWidget();
+                      return ChangeNotifierProvider.value(
+                          value: productsOnSale[index], child: OnSaleWidget());
                     }),
               ))
             ],
@@ -132,8 +142,10 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: EdgeInsets.zero,
             crossAxisSpacing: 10,
             childAspectRatio: size.width / (size.height * 0.59),
-            children: List.generate(4, (index) {
-              return FeedsWidget();
+            children: List.generate(
+                allProducts.length < 4 ? allProducts.length : 4, (index) {
+              return ChangeNotifierProvider.value(
+                  value: allProducts[index], child: FeedsWidget());
             }),
           )
         ],
