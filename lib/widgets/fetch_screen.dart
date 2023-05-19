@@ -45,8 +45,9 @@ class _FetchScreenState extends State<FetchScreen> {
         await wishlistProvider.fetchWishlist();
       }
 
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (ctx) => BottomBarScreen()));
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (ctx) => const BottomBarScreen(),
+      ));
     });
 
     super.initState();

@@ -38,15 +38,17 @@ class GoogleButton extends StatelessWidget {
               'createdAt': Timestamp.now(),
             });
           }
-          Navigator.of(context).pushReplacement(MaterialPageRoute(
-            builder: (context) => const FetchScreen(),
-          ));
-
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (context) => const BottomBarScreen(),
+              builder: (context) => const FetchScreen(),
             ),
           );
+
+          // Navigator.of(context).pushReplacement(
+          //   MaterialPageRoute(
+          //     builder: (context) => const BottomBarScreen(),
+          //   ),
+          // );
         } on FirebaseException catch (error) {
           GlobalMethods.errorDialog(
               subtitle: '${error.message}', context: context);
